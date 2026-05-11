@@ -7,6 +7,24 @@
 
 ---
 
+## 🌐 라이브 대시보드 (Live Demo)
+
+> 🎯 **인터랙티브 데모 바로 가기 →** **[🤗 Hugging Face Spaces에서 열기](https://huggingface.co/spaces/67JM89/wc2026-predictor)**
+
+[![Open in HF Spaces](https://img.shields.io/badge/🤗%20Open%20in-Hugging%20Face%20Spaces-yellow?style=for-the-badge)](https://huggingface.co/spaces/67JM89/wc2026-predictor)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+
+**대시보드 기능:**
+- 📊 매치 예측 (승무패 확률 + 예상 스코어 + 점수 분포)
+- 🏆 토너먼트 전망 (Top 시상대 + 단계별 진출 히트맵)
+- 🌍 그룹 스테이지 (12개 조 진출 확률)
+- 👤 선수 카드 (FIFA / FM 스타일)
+- 🎲 브래킷 시뮬레이터 (단일 토너먼트 시각화)
+- 🌐 **8개 언어 지원** — 한국어 / English / Español / Français / Italiano / Português / 日本語 / 中文
+- 🎵 Spotify 미니 플레이어 (BGM)
+
+---
+
 ## 🎯 예측 결과 미리보기
 
 | 순위 | 팀 | 우승 확률 | 결승 | 4강 |
