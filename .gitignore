@@ -47,3 +47,6 @@ soccerdata/
 .env.local
 *.key
 kaggle.json
+
+# ===== Runtime artifacts =====
+share_url.txt
