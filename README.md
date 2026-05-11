@@ -43,11 +43,7 @@
 
 ## 🚀 사용법
 
-### 인터랙티브 UI 실행
-```bash
-python gradio_app.py
-```
-브라우저에서 http://localhost:7860 접속 → 매치업 예측 + 토너먼트 outlook
+대시보드는 위 [🤗 Hugging Face Spaces](https://huggingface.co/spaces/67JM89/wc2026-predictor) 링크에서 바로 사용 가능. 아래는 개발/재현 용도.
 
 ### Python 모듈로 사용
 ```python
