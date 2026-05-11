@@ -28,23 +28,27 @@ DEFAULT_LANG = "en"
 SPOTIFY_PLAYLIST_ID = "37i9dQZF1DWWQRwui0ExPn"  # Lofi Beats
 
 
-# ============================== Palette / Static dicts ==============================
+# ============================== Palette (Anthropic-inspired) ==============================
 PAL = {
-    "bg":         "#fefcf7",
-    "card":       "#ffffff",
-    "primary":    "#5b8ec4",
-    "primary_d":  "#3d6c9e",
-    "accent":     "#e6b800",
-    "muted":      "#8b8680",
-    "text":       "#2b2b2b",
-    "soft_bg":    "#faf6ec",
-    "border":     "#ebe5d8",
-    "podium_g":   "#d4af37",
-    "podium_s":   "#b8b8b8",
-    "podium_b":   "#cd7f32",
-    "section_a":  "#fefcf7",
-    "section_b":  "#faf6ec",
+    "bg":         "#F0EEE6",   # Anthropic cream
+    "card":       "#FAF9F5",   # warmer card surface
+    "card_alt":   "#FFFFFF",   # crisp white for emphasis
+    "primary":    "#CC785C",   # Anthropic coral
+    "primary_d":  "#A85841",   # darker coral (hover)
+    "primary_l":  "#E89B7E",   # lighter coral
+    "accent":     "#D4AF37",   # warm gold (podium/champion)
+    "muted":      "#7C7768",   # warm gray
+    "text":       "#1A1815",   # warm near-black
+    "text_2":     "#3D3929",   # secondary deep
+    "soft_bg":    "#E8E3D4",   # warmer cream for sections
+    "border":     "#D6CFC1",   # warm border
+    "podium_g":   "#D4AF37",
+    "podium_s":   "#B8B8B8",
+    "podium_b":   "#CD7F32",
 }
+
+FONT_SERIF = "'Source Serif Pro', 'Source Serif 4', Georgia, 'Times New Roman', serif"
+FONT_SANS  = "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif"
 
 FLAGS = {
     "Algeria":"🇩🇿","Argentina":"🇦🇷","Australia":"🇦🇺","Austria":"🇦🇹",
@@ -81,12 +85,12 @@ CODES = {
     "Uruguay":"URU","Uzbekistan":"UZB",
 }
 CONFED_INFO = {
-    "UEFA":     {"color":"#4a72a8", "icon":"🛡️"},
-    "CONMEBOL": {"color":"#e6b800", "icon":"⭐"},
-    "CONCACAF": {"color":"#6abf69", "icon":"🌎"},
-    "AFC":      {"color":"#c44d4d", "icon":"🏯"},
-    "CAF":      {"color":"#8c564b", "icon":"🦁"},
-    "OFC":      {"color":"#7a4eb3", "icon":"🌊"},
+    "UEFA":     {"color":"#3D5A80", "icon":"🛡️"},   # muted indigo
+    "CONMEBOL": {"color":"#D4A036", "icon":"⭐"},   # warm amber
+    "CONCACAF": {"color":"#588157", "icon":"🌎"},   # sage green
+    "AFC":      {"color":"#A8453B", "icon":"🏯"},   # deep terracotta
+    "CAF":      {"color":"#7C4A2D", "icon":"🦁"},   # warm coffee brown
+    "OFC":      {"color":"#6F4E7C", "icon":"🌊"},   # muted plum
 }
 CONFED_OF = {
     **{x:"UEFA" for x in ["Spain","France","England","Germany","Netherlands","Portugal","Belgium",
@@ -128,7 +132,7 @@ def rating_color(v):
     return "#d32f2f"
 
 
-PLOTLY_FONT = dict(family="'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, sans-serif",
+PLOTLY_FONT = dict(family="'Inter', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, sans-serif",
                    color=PAL["text"], size=13)
 PLOTLY_LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)",
@@ -349,24 +353,24 @@ def render_podium(lang):
         return f"""
         <div style="display:flex; flex-direction:column; align-items:center; flex:1; padding:6px;">
             <div style="font-size:58px; line-height:1;">{flag(team)}</div>
-            <div style="font-size:16px; font-weight:700; margin:10px 0 0; text-align:center;">{team}</div>
-            <div style="font-size:24px; font-weight:900; color:{medal_color}; margin:6px 0 10px;">{p:.1f}%</div>
+            <div style="font-family:{FONT_SERIF}; font-size:18px; font-weight:600; margin:10px 0 0; text-align:center; color:{PAL['text']};">{team}</div>
+            <div style="font-size:24px; font-weight:800; color:{medal_color}; margin:6px 0 10px; font-family:{FONT_SANS};">{p:.1f}%</div>
             <div style="width:100%; height:{height_px}px;
                         background:linear-gradient(180deg,{medal_color},{medal_color}cc);
                         border-radius:10px 10px 0 0; display:flex; align-items:center; justify-content:center;
-                        color:white; font-size:34px; font-weight:900;
+                        color:white; font-family:{FONT_SERIF}; font-size:34px; font-weight:600;
                         text-shadow:0 2px 4px rgba(0,0,0,0.2);">{label}</div>
         </div>
         """
 
     return f"""
-    <div style="background:linear-gradient(135deg, #fffdf6, #faf3dd);
-                padding:18px 24px; border-radius:14px; border:1px solid {PAL['border']};">
+    <div style="background:linear-gradient(135deg, {PAL['card']}, {PAL['soft_bg']});
+                padding:24px 28px; border-radius:14px; border:1px solid {PAL['border']};">
         <div style="text-align:center; font-size:11px; color:{PAL['muted']};
-                    letter-spacing:2.5px; font-weight:600; margin-bottom:6px;">
+                    letter-spacing:2.5px; font-weight:600; margin-bottom:6px; font-family:{FONT_SANS};">
             {t('podium_title', lang)}
         </div>
-        <div style="text-align:center; font-size:11px; color:{PAL['muted']}; margin-bottom:14px;">
+        <div style="text-align:center; font-size:12px; color:{PAL['muted']}; margin-bottom:18px; font-family:{FONT_SANS};">
             {t('podium_caption', lang)}
         </div>
         <div style="display:flex; align-items:flex-end; gap:6px; max-width:620px; margin:0 auto;">
@@ -384,16 +388,16 @@ def render_hero(lang):
     n_matches = pd.read_sql("SELECT COUNT(*) c FROM intl_matches", conn).c[0]
     conn.close()
     return f"""
-    <div style="background:linear-gradient(135deg,#fffdf6 0%,#faf3dd 100%);
-                padding:24px 28px; border-radius:16px; border:1px solid {PAL['border']};
-                margin-bottom:18px;">
-        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-            <div style="font-size:44px; line-height:1;">🏆</div>
+    <div style="background:linear-gradient(135deg,{PAL['card']} 0%,{PAL['soft_bg']} 100%);
+                padding:32px 36px; border-radius:14px; border:1px solid {PAL['border']};
+                margin-bottom:20px;">
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+            <div style="font-size:46px; line-height:1;">🏆</div>
             <div>
-                <div style="font-size:26px; font-weight:800; color:{PAL['text']};">
+                <div style="font-family:{FONT_SERIF}; font-size:30px; font-weight:600; color:{PAL['text']}; letter-spacing:-0.01em; line-height:1.15;">
                     {t('title', lang)}
                 </div>
-                <div style="opacity:0.7; margin-top:4px; font-size:13px;">{t('subtitle', lang)}</div>
+                <div style="color:{PAL['muted']}; margin-top:6px; font-size:13px; font-family:{FONT_SANS};">{t('subtitle', lang)}</div>
             </div>
         </div>
         <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
@@ -419,10 +423,12 @@ def render_hero(lang):
     """
 
 
-def render_section_header(text, color=PAL["primary_d"]):
+def render_section_header(text, color=None):
+    color = color or PAL["text"]
     return f"""
-    <div style="font-size:18px; font-weight:700; color:{color}; margin:18px 0 10px;
-                padding:8px 0; border-bottom:2px solid {color};">{text}</div>
+    <div style="font-family:{FONT_SERIF}; font-size:22px; font-weight:600; color:{color};
+                margin:22px 0 14px; padding-bottom:10px; border-bottom:1px solid {PAL['border']};
+                letter-spacing:-0.01em;">{text}</div>
     """
 
 
@@ -545,11 +551,11 @@ def render_team_squad(team, position_filter, lang):
 
     header = f"""
     <div style="background:linear-gradient(135deg,{cinfo['color']},{cinfo['color']}dd);
-                color:white; padding:20px 24px; border-radius:14px; margin-bottom:14px;
+                color:white; padding:22px 28px; border-radius:14px; margin-bottom:16px;
                 display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div>
-            <div style="font-size:32px; font-weight:800;">{flag(team)} {team}</div>
-            <div style="font-size:12px; opacity:0.92; margin-top:6px;">
+            <div style="font-family:{FONT_SERIF}; font-size:32px; font-weight:600; letter-spacing:-0.01em;">{flag(team)} {team}</div>
+            <div style="font-size:12px; opacity:0.92; margin-top:6px; font-family:{FONT_SANS};">
                 {cinfo['icon']} {conf_of(team)} · {cname}
             </div>
         </div>
@@ -680,12 +686,12 @@ def render_bracket(result, lang):
         """)
     champ_card = f"""
     <div style="background:linear-gradient(135deg,#fff3a6,{PAL['accent']});
-                border-radius:16px; padding:26px 20px; text-align:center; color:#4a3500;
-                box-shadow:0 8px 28px rgba(230,184,0,0.32); margin-bottom:18px;">
-        <div style="font-size:11px; letter-spacing:3px; font-weight:700; margin-bottom:8px;">🏆 {t('champion', lang)}</div>
-        <div style="font-size:64px; line-height:1;">{flag(champion)}</div>
-        <div style="font-size:28px; font-weight:900; margin:10px 0 4px;">{champion}</div>
-        <div style="font-size:12px; opacity:0.8;">{t('defeated', lang)} {flag(runner)} {runner}</div>
+                border-radius:14px; padding:30px 24px; text-align:center; color:#4a3500;
+                box-shadow:0 8px 28px rgba(212,175,55,0.28); margin-bottom:20px;">
+        <div style="font-size:11px; letter-spacing:3px; font-weight:700; margin-bottom:10px; font-family:{FONT_SANS};">🏆 {t('champion', lang)}</div>
+        <div style="font-size:68px; line-height:1;">{flag(champion)}</div>
+        <div style="font-family:{FONT_SERIF}; font-size:32px; font-weight:600; margin:12px 0 6px; letter-spacing:-0.01em;">{champion}</div>
+        <div style="font-size:12px; opacity:0.8; font-family:{FONT_SANS};">{t('defeated', lang)} {flag(runner)} {runner}</div>
     </div>
     """
     return f"""
@@ -745,15 +751,15 @@ def render_match_summary(team_a, team_b, r, lang):
     elo_diff = r["elo_a"] - r["elo_b"]
     def side(team, info, elo):
         return f"""
-        <div style="flex:1; text-align:center; padding:14px;">
-            <div style="font-size:54px; line-height:1;">{flag(team)}</div>
-            <div style="font-size:18px; font-weight:800; margin-top:8px;">{team}</div>
+        <div style="flex:1; text-align:center; padding:16px;">
+            <div style="font-size:56px; line-height:1;">{flag(team)}</div>
+            <div style="font-family:{FONT_SERIF}; font-size:20px; font-weight:600; margin-top:10px; color:{PAL['text']}; letter-spacing:-0.01em;">{team}</div>
             <div style="display:inline-block; margin-top:8px; padding:3px 10px; border-radius:12px;
-                        background:{info['color']}; color:white; font-size:10px; font-weight:600; letter-spacing:0.5px;">
+                        background:{info['color']}; color:white; font-size:10px; font-weight:600; letter-spacing:0.5px; font-family:{FONT_SANS};">
                 {info['icon']} {conf_of(team)}
             </div>
-            <div style="font-size:10px; color:{PAL['muted']}; margin-top:10px; letter-spacing:1px;">ELO</div>
-            <div style="font-size:22px; font-weight:800; color:{PAL['primary_d']};">{elo:.0f}</div>
+            <div style="font-size:10px; color:{PAL['muted']}; margin-top:12px; letter-spacing:1px; font-family:{FONT_SANS};">ELO</div>
+            <div style="font-size:22px; font-weight:700; color:{PAL['primary']}; font-family:{FONT_SANS};">{elo:.0f}</div>
         </div>
         """
     return f"""
@@ -766,13 +772,13 @@ def render_match_summary(team_a, team_b, r, lang):
                 <div style="font-size:11px; color:{PAL['muted']}; margin-top:8px; letter-spacing:1px;">
                     {t('expected_goals', lang).upper()}
                 </div>
-                <div style="font-size:32px; font-weight:900; color:{PAL['primary_d']}; line-height:1.1; margin-top:4px;">
+                <div style="font-family:{FONT_SERIF}; font-size:36px; font-weight:600; color:{PAL['primary']}; line-height:1.1; margin-top:6px; letter-spacing:-0.02em;">
                     {r['expected_a_goals']} : {r['expected_b_goals']}
                 </div>
-                <div style="font-size:11px; color:{PAL['muted']}; margin-top:8px;">
+                <div style="font-size:12px; color:{PAL['muted']}; margin-top:10px; font-family:{FONT_SANS};">
                     {t('most_likely', lang)} <b style="color:{PAL['accent']};">{r['most_likely_score']}</b>
                 </div>
-                <div style="font-size:11px; color:{PAL['muted']}; margin-top:4px;">
+                <div style="font-size:11px; color:{PAL['muted']}; margin-top:4px; font-family:{FONT_SANS};">
                     {t('elo_diff', lang)} <b>{elo_diff:+.0f}</b>
                 </div>
             </div>
@@ -903,8 +909,89 @@ INIT_SUM, INIT_DONUT, INIT_HEAT, INIT_TOP, INIT_WHY = predict_match("Spain", "Ar
 
 # ============================== Spotify + CSS + JS ==============================
 CSS = f"""
-.gradio-container {{ max-width: 1300px !important; background: {PAL['bg']} !important; }}
-.tab-nav button {{ font-weight: 600 !important; }}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&display=swap');
+
+body, .gradio-container {{
+    background: {PAL['bg']} !important;
+    color: {PAL['text']} !important;
+    font-family: {FONT_SANS} !important;
+}}
+.gradio-container {{
+    max-width: 1280px !important;
+    padding: 20px 32px !important;
+}}
+
+/* Serif headers — Anthropic editorial feel */
+.serif-h,
+.gradio-container h1, .gradio-container h2, .gradio-container h3,
+.gradio-container .prose h1, .gradio-container .prose h2, .gradio-container .prose h3 {{
+    font-family: {FONT_SERIF} !important;
+    letter-spacing: -0.01em;
+    color: {PAL['text']};
+}}
+.gradio-container h1 {{ font-weight: 600 !important; }}
+.gradio-container h2 {{ font-weight: 600 !important; }}
+.gradio-container h3 {{ font-weight: 500 !important; }}
+
+/* Soft, warm cards */
+.gradio-container .block,
+.gradio-container .form,
+.gradio-container .panel {{
+    background: {PAL['card']} !important;
+    border-color: {PAL['border']} !important;
+    border-radius: 12px !important;
+}}
+
+/* Primary button — Anthropic coral */
+.gradio-container button.primary,
+.gradio-container button.lg.primary {{
+    background: {PAL['primary']} !important;
+    color: white !important;
+    border: 1px solid {PAL['primary_d']} !important;
+    font-weight: 600 !important;
+    transition: background 0.15s ease;
+}}
+.gradio-container button.primary:hover {{
+    background: {PAL['primary_d']} !important;
+}}
+
+/* Tab nav — soft underline style */
+.gradio-container .tab-nav {{
+    border-bottom: 1px solid {PAL['border']} !important;
+    margin-bottom: 16px !important;
+}}
+.gradio-container .tab-nav button {{
+    font-weight: 600 !important;
+    font-family: {FONT_SANS} !important;
+    color: {PAL['muted']} !important;
+    padding: 12px 18px !important;
+    background: transparent !important;
+}}
+.gradio-container .tab-nav button.selected {{
+    color: {PAL['primary']} !important;
+    border-bottom: 2px solid {PAL['primary']} !important;
+    background: transparent !important;
+}}
+
+/* Slider track — coral accent */
+.gradio-container input[type="range"]::-webkit-slider-thumb {{
+    background: {PAL['primary']} !important;
+}}
+
+/* Dropdown / inputs — clean cream */
+.gradio-container input[type="text"],
+.gradio-container input[type="number"],
+.gradio-container select,
+.gradio-container textarea {{
+    background: {PAL['card']} !important;
+    border-color: {PAL['border']} !important;
+    color: {PAL['text']} !important;
+}}
+
+/* Section spacing — generous editorial */
+.gr-form, .gr-block {{ gap: 14px !important; }}
+
+/* Spotify floating player */
 
 /* Spotify floating player */
 #spotify-fab {{
@@ -1016,8 +1103,31 @@ SPOTIFY_HTML_BLOCK = f"""
 
 
 # ============================== App layout ==============================
-with gr.Blocks(title="2026 WC Predictor", css=CSS,
-               theme=gr.themes.Soft(primary_hue="blue", secondary_hue="amber", neutral_hue="stone")) as app:
+_anthropic_theme = gr.themes.Soft(
+    primary_hue="orange",
+    secondary_hue="amber",
+    neutral_hue="stone",
+    font=[gr.themes.GoogleFont("Inter"), "system-ui", "sans-serif"],
+).set(
+    body_background_fill=PAL["bg"],
+    body_text_color=PAL["text"],
+    background_fill_primary=PAL["card"],
+    background_fill_secondary=PAL["soft_bg"],
+    border_color_primary=PAL["border"],
+    button_primary_background_fill=PAL["primary"],
+    button_primary_background_fill_hover=PAL["primary_d"],
+    button_primary_text_color="white",
+    button_primary_border_color=PAL["primary_d"],
+    block_border_color=PAL["border"],
+    block_label_text_color=PAL["text_2"],
+    block_title_text_color=PAL["text"],
+    block_shadow="0 1px 3px rgba(26,24,21,0.06)",
+    input_border_color=PAL["border"],
+    input_background_fill=PAL["card"],
+    panel_border_color=PAL["border"],
+)
+
+with gr.Blocks(title="2026 WC Predictor", css=CSS, theme=_anthropic_theme) as app:
 
     # ─── Top bar: Language selector ───
     with gr.Row():
