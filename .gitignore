@@ -1,0 +1,49 @@
+# ===== Data (too large for git) =====
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+
+# ===== Virtual envs =====
+.venv/
+venv/
+env/
+ENV/
+
+# ===== IDE / OS =====
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Jupyter =====
+.ipynb_checkpoints/
+
+# ===== Logs / temp =====
+*.log
+*.tmp
+*.bak
+*~
+
+# ===== Soccerdata cache =====
+soccerdata/
+
+# ===== Secrets =====
+.env
+.env.local
+*.key
+kaggle.json
