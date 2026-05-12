@@ -42,6 +42,13 @@ PAL = {
     "text_2":     "#3D3929",   # secondary deep
     "soft_bg":    "#E8E3D4",   # warmer cream for sections
     "border":     "#D6CFC1",   # warm border
+    "shadow":     "rgba(60,40,20,0.06)",   # warm shadow
+    "shadow_lg":  "rgba(60,40,20,0.10)",
+    "win_bg":     "#F2E3D4",   # warm coral-tinted win highlight
+    "win_text":   "#7A4427",
+    "rank1_bg":   "#FAF0DD",   # cream gold tint (1st)
+    "rank2_bg":   "#F5EBD8",   # soft beige (2nd)
+    "rank3_bg":   "#F0E4D0",   # darker beige (3rd)
     "podium_g":   "#D4AF37",
     "podium_s":   "#B8B8B8",
     "podium_b":   "#CD7F32",
@@ -124,12 +131,13 @@ def conf_name(team, lang): return CONFED_NAMES_BY_LANG.get(lang, CONFED_NAMES_BY
 
 
 def rating_color(v):
-    if v >= 85: return "#1b5e20"
-    if v >= 75: return "#388e3c"
-    if v >= 65: return "#7cb342"
-    if v >= 55: return "#fbc02d"
-    if v >= 45: return "#f57c00"
-    return "#d32f2f"
+    # Warm theme — gradient from deep sage (elite) → coral (low)
+    if v >= 85: return "#3D5A40"   # deep sage
+    if v >= 75: return "#588157"   # sage green
+    if v >= 65: return "#A3B18A"   # light sage
+    if v >= 55: return "#D4A036"   # warm amber
+    if v >= 45: return "#CC785C"   # coral
+    return "#A8453B"               # deep terracotta
 
 
 PLOTLY_FONT = dict(family="'Inter', 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, sans-serif",
@@ -139,7 +147,18 @@ PLOTLY_LAYOUT = dict(
     plot_bgcolor="rgba(0,0,0,0)",
     font=PLOTLY_FONT,
     margin=dict(l=10, r=10, t=40, b=10),
+    hoverlabel=dict(bgcolor=PAL["card_alt"], bordercolor=PAL["primary"],
+                    font=dict(family=PLOTLY_FONT["family"], color=PAL["text"], size=12)),
 )
+
+# Warm theme colorscale: cream → amber → coral → deep terracotta
+WARM_SCALE = [
+    [0.0, "#FAF3E0"],
+    [0.25, "#F0C674"],
+    [0.5, "#E89B7E"],
+    [0.75, "#CC785C"],
+    [1.0, "#7A3D2A"],
+]
 
 
 # ============================== Plotly charts ==============================
@@ -147,8 +166,9 @@ def fig_score_heatmap(grid, team_a, team_b, lang):
     g = (grid[:6, :6] * 100).astype(float)
     text = [[f"{v:.1f}" for v in row] for row in g]
     fig = go.Figure(data=go.Heatmap(
-        z=g, text=text, texttemplate="%{text}", textfont={"size": 11},
-        colorscale="Viridis", showscale=True, colorbar=dict(title="P %", thickness=12),
+        z=g, text=text, texttemplate="%{text}", textfont={"size": 11, "color": PAL["text"]},
+        colorscale=WARM_SCALE, showscale=True, colorbar=dict(title="P %", thickness=12,
+            tickfont=dict(color=PAL["muted"], size=10)),
         x=[str(i) for i in range(6)], y=[str(i) for i in range(6)],
         hovertemplate=f"{flag(team_a)} {team_a} %{{y}}-%{{x}} {flag(team_b)} {team_b}<br>P = %{{z:.2f}}%<extra></extra>",
     ))
@@ -191,8 +211,9 @@ def fig_top_scores_bar(top_scores, team_a, team_b, lang):
     probs = [s["prob"] * 100 for s in top_scores]
     fig = go.Figure(go.Bar(
         x=probs, y=scores, orientation="h",
-        marker=dict(color=probs, colorscale="Viridis", line=dict(width=0)),
+        marker=dict(color=probs, colorscale=WARM_SCALE, line=dict(width=0)),
         text=[f"{p:.2f}%" for p in probs], textposition="outside",
+        textfont=dict(color=PAL["text"]),
         hovertemplate="<b>%{y}</b>: %{x:.2f}%<extra></extra>",
     ))
     fig.update_layout(
@@ -258,9 +279,10 @@ def fig_stage_heatmap(lang):
               t("stage_sf", lang), t("stage_final", lang), t("stage_win", lang)]
     text = [[(f"{v:.0f}" if v >= 10 else f"{v:.1f}") if v >= 1 else "" for v in row] for row in M]
     fig = go.Figure(data=go.Heatmap(
-        z=M, x=stages, y=labels, text=text, texttemplate="%{text}", textfont={"size": 11},
-        colorscale=[[0, "#fff8e1"], [0.5, "#ffb300"], [1, "#bf360c"]],
-        zmin=0, zmax=100, showscale=True, colorbar=dict(title="%", thickness=12),
+        z=M, x=stages, y=labels, text=text, texttemplate="%{text}", textfont={"size": 11, "color": PAL["text"]},
+        colorscale=WARM_SCALE,
+        zmin=0, zmax=100, showscale=True, colorbar=dict(title="%", thickness=12,
+            tickfont=dict(color=PAL["muted"], size=10)),
         hovertemplate="<b>%{y}</b><br>%{x}: %{z:.1f}%<extra></extra>",
     ))
     fig.update_layout(title=f"<b>{t('stage_section', lang)}</b>", height=900,
@@ -325,16 +347,21 @@ def render_confed_legend(lang):
     names = CONFED_NAMES_BY_LANG.get(lang, CONFED_NAMES_BY_LANG["en"])
     for c, info in CONFED_INFO.items():
         items.append(f"""
-        <div style="display:flex; align-items:center; gap:6px; padding:6px 10px; background:white;
-                    border-radius:8px; border:1px solid {PAL['border']};">
-            <span style="width:14px; height:14px; border-radius:4px; background:{info['color']}; flex-shrink:0;"></span>
-            <span style="font-size:12px;"><b>{info['icon']} {c}</b> · {names.get(c, '')}</span>
+        <div class="hover-lift" style="display:flex; align-items:center; gap:8px; padding:7px 12px;
+                    background:{PAL['card_alt']}; border-radius:20px; border:1px solid {PAL['border']};
+                    transition:transform 0.15s ease, box-shadow 0.15s ease;">
+            <span style="width:10px; height:10px; border-radius:50%; background:{info['color']}; flex-shrink:0;
+                         box-shadow:0 0 0 2px {info['color']}22;"></span>
+            <span style="font-size:11.5px; color:{PAL['text_2']};">
+                <b style="color:{PAL['text']};">{info['icon']} {c}</b>
+                <span style="color:{PAL['muted']}; margin-left:2px;">· {names.get(c, '')}</span>
+            </span>
         </div>
         """)
     return f"""
-    <div style="background:{PAL['soft_bg']}; padding:12px 16px; border-radius:10px;
-                margin:10px 0; border:1px solid {PAL['border']};">
-        <div style="font-size:11px; letter-spacing:1.5px; color:{PAL['muted']}; margin-bottom:8px; font-weight:600;">
+    <div style="background:{PAL['soft_bg']}; padding:14px 18px; border-radius:12px;
+                margin:12px 0; border:1px solid {PAL['border']};">
+        <div style="font-size:10px; letter-spacing:2px; color:{PAL['muted']}; margin-bottom:10px; font-weight:700; text-transform:uppercase;">
             {t('confed_legend', lang)}
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">{''.join(items)}</div>
@@ -426,9 +453,14 @@ def render_hero(lang):
 def render_section_header(text, color=None):
     color = color or PAL["text"]
     return f"""
-    <div style="font-family:{FONT_SERIF}; font-size:22px; font-weight:600; color:{color};
-                margin:22px 0 14px; padding-bottom:10px; border-bottom:1px solid {PAL['border']};
-                letter-spacing:-0.01em;">{text}</div>
+    <div style="display:flex; align-items:center; gap:10px;
+                margin:24px 0 14px; padding-bottom:10px;
+                border-bottom:1px solid {PAL['border']};">
+        <span style="display:inline-block; width:5px; height:22px; background:{PAL['primary']};
+                     border-radius:3px; flex-shrink:0;"></span>
+        <span style="font-family:{FONT_SERIF}; font-size:22px; font-weight:600; color:{color};
+                     letter-spacing:-0.01em; line-height:1.2;">{text}</span>
+    </div>
     """
 
 
@@ -469,10 +501,10 @@ def stat_bar(name, value):
     c = rating_color(v)
     return f"""
     <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; font-size:12px;">
-        <div style="flex:0 0 95px; color:#555;">{name}</div>
-        <div style="flex:0 0 28px; text-align:right; color:{c}; font-weight:700;">{v}</div>
-        <div style="flex:1; background:#eee; border-radius:4px; height:7px; overflow:hidden;">
-            <div style="background:{c}; width:{pct}%; height:100%; border-radius:4px;"></div>
+        <div style="flex:0 0 95px; color:{PAL['text_2']};">{name}</div>
+        <div style="flex:0 0 28px; text-align:right; color:{c}; font-weight:700; font-variant-numeric:tabular-nums;">{v}</div>
+        <div style="flex:1; background:{PAL['soft_bg']}; border-radius:4px; height:7px; overflow:hidden;">
+            <div style="background:linear-gradient(90deg,{c},{c}cc); width:{pct}%; height:100%; border-radius:4px; transition:width 0.4s ease;"></div>
         </div>
     </div>
     """
@@ -508,29 +540,30 @@ def render_card(row):
         bars = "".join(stat_bar(n, v) for n, v in stats)
         return f"""
         <div style="margin-bottom:10px;">
-            <div style="display:flex; justify-content:space-between;
-                        border-bottom:1px solid #eee; margin-bottom:6px; padding-bottom:3px;">
-                <span style="font-weight:700; font-size:12px;">{name}</span>
-                <span style="color:{ac}; font-weight:700; font-size:13px;">{av}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center;
+                        border-bottom:1px solid {PAL['border']}; margin-bottom:6px; padding-bottom:4px;">
+                <span style="font-weight:700; font-size:12px; color:{PAL['text_2']}; letter-spacing:0.2px;">{name}</span>
+                <span style="color:{ac}; font-weight:700; font-size:13px; font-variant-numeric:tabular-nums;">{av}</span>
             </div>{bars}
         </div>
         """
 
     return f"""
-    <div style="background:white; border-radius:12px; padding:14px;
-                box-shadow:0 2px 8px rgba(91,142,196,0.10); border-top:5px solid {oc};">
+    <div class="player-card" style="background:{PAL['card_alt']}; border-radius:12px; padding:14px;
+                box-shadow:0 2px 10px {PAL['shadow']}; border:1px solid {PAL['border']};
+                border-top:4px solid {oc}; transition:transform 0.18s ease, box-shadow 0.18s ease;">
         <div style="display:flex; gap:12px; margin-bottom:12px;">
-            <div style="background:{oc}; color:white; width:56px; height:56px;
+            <div style="background:linear-gradient(135deg,{oc},{oc}d0); color:white; width:56px; height:56px;
                         border-radius:10px; display:flex; align-items:center; justify-content:center;
-                        font-size:24px; font-weight:900; flex-shrink:0;
-                        box-shadow:0 2px 4px rgba(0,0,0,0.12);">{overall}</div>
+                        font-family:{FONT_SERIF}; font-size:24px; font-weight:700; flex-shrink:0;
+                        box-shadow:0 2px 6px {PAL['shadow_lg']}; font-variant-numeric:tabular-nums;">{overall}</div>
             <div style="flex:1; min-width:0;">
-                <div style="font-size:14px; font-weight:700; color:#222;
-                            overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{name}</div>
-                <div style="font-size:11px; color:#666; margin-top:2px;
+                <div style="font-family:{FONT_SERIF}; font-size:15px; font-weight:600; color:{PAL['text']};
+                            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:-0.01em;">{name}</div>
+                <div style="font-size:11px; color:{PAL['muted']}; margin-top:2px;
                             overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{club}</div>
-                <div style="font-size:10px; color:#888; margin-top:3px;">
-                    <b>{position}</b> · {age}y · {height}{(' · ' + foot[0]) if foot else ''}
+                <div style="font-size:10px; color:{PAL['muted']}; margin-top:4px; letter-spacing:0.3px;">
+                    <b style="color:{PAL['primary_d']};">{position}</b> · {age}y · {height}{(' · ' + foot[0]) if foot else ''}
                 </div>
             </div>
         </div>
@@ -568,9 +601,11 @@ def render_team_squad(team, position_filter, lang):
                 <div style="font-size:24px; font-weight:800;">{n_gk}</div></div>
         </div>
     </div>
-    <div style="background:#fff8e1; border-left:4px solid {PAL['accent']};
-                padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:12px; color:#5a4a00;">
-        {t('data_disclaimer', lang)}
+    <div style="background:{PAL['soft_bg']}; border-left:4px solid {PAL['accent']};
+                padding:12px 16px; border-radius:8px; margin-bottom:14px; font-size:12px;
+                color:{PAL['text_2']}; display:flex; align-items:center; gap:10px;">
+        <span style="font-size:16px;">ℹ️</span>
+        <span>{t('data_disclaimer', lang)}</span>
     </div>
     """
     grid = f"""<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(265px,1fr)); gap:12px;">{cards}</div>"""
@@ -629,24 +664,28 @@ def simulate_one_bracket(seed=42):
 
 def render_match_block(home, away, sh, sa, winner):
     h_win = winner == home; a_win = winner == away
-    h_bg = "#e6f4ea" if h_win else "white"
-    a_bg = "#e6f4ea" if a_win else "white"
+    h_bg = PAL["win_bg"] if h_win else PAL["card_alt"]
+    a_bg = PAL["win_bg"] if a_win else PAL["card_alt"]
+    h_color = PAL["win_text"] if h_win else PAL["text_2"]
+    a_color = PAL["win_text"] if a_win else PAL["text_2"]
     return f"""
-    <div style="background:white; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.06);
-                overflow:hidden; min-width:165px; margin:3px 0;">
-        <div style="display:flex; align-items:center; padding:6px 9px; background:{h_bg}; border-bottom:1px solid #f5f5f5;">
+    <div style="background:{PAL['card_alt']}; border-radius:8px; box-shadow:0 1px 3px {PAL['shadow']};
+                overflow:hidden; min-width:165px; margin:3px 0; border:1px solid {PAL['border']};">
+        <div style="display:flex; align-items:center; padding:7px 10px; background:{h_bg};
+                    border-bottom:1px solid {PAL['border']}; border-left:3px solid {PAL['primary'] if h_win else 'transparent'};">
             <span style="font-size:15px; margin-right:6px;">{flag(home)}</span>
             <span style="flex:1; font-size:12px; font-weight:{'700' if h_win else '500'};
-                        color:{'#1b5e20' if h_win else '#444'};
+                        color:{h_color};
                         overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{home}</span>
-            <span style="font-weight:700; font-size:14px; color:{'#1b5e20' if h_win else '#444'};">{sh}</span>
+            <span style="font-weight:700; font-size:14px; color:{h_color}; font-variant-numeric:tabular-nums;">{sh}</span>
         </div>
-        <div style="display:flex; align-items:center; padding:6px 9px; background:{a_bg};">
+        <div style="display:flex; align-items:center; padding:7px 10px; background:{a_bg};
+                    border-left:3px solid {PAL['primary'] if a_win else 'transparent'};">
             <span style="font-size:15px; margin-right:6px;">{flag(away)}</span>
             <span style="flex:1; font-size:12px; font-weight:{'700' if a_win else '500'};
-                        color:{'#1b5e20' if a_win else '#444'};
+                        color:{a_color};
                         overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{away}</span>
-            <span style="font-weight:700; font-size:14px; color:{'#1b5e20' if a_win else '#444'};">{sa}</span>
+            <span style="font-weight:700; font-size:14px; color:{a_color}; font-variant-numeric:tabular-nums;">{sa}</span>
         </div>
     </div>
     """
@@ -713,29 +752,31 @@ def render_groups_results(result, lang):
         for pos, x in enumerate(ranked, 1):
             badge, row_bg = "", ""
             if pos == 1:
-                badge = '<span style="background:#2e7d32; color:white; font-size:9px; padding:1px 6px; border-radius:8px;">1</span>'
-                row_bg = "background:#e8f5e9;"
+                badge = f'<span style="background:{PAL["primary"]}; color:white; font-size:9px; padding:1px 7px; border-radius:8px; font-weight:700;">1</span>'
+                row_bg = f"background:{PAL['rank1_bg']};"
             elif pos == 2:
-                badge = '<span style="background:#558b2f; color:white; font-size:9px; padding:1px 6px; border-radius:8px;">2</span>'
-                row_bg = "background:#f1f8e9;"
+                badge = f'<span style="background:{PAL["primary_l"]}; color:{PAL["text"]}; font-size:9px; padding:1px 7px; border-radius:8px; font-weight:700;">2</span>'
+                row_bg = f"background:{PAL['rank2_bg']};"
             elif pos == 3:
-                badge = '<span style="background:#f9a825; color:#4a3500; font-size:9px; padding:1px 6px; border-radius:8px;">3</span>'
-                row_bg = "background:#fff8e1;"
+                badge = f'<span style="background:{PAL["accent"]}; color:{PAL["text"]}; font-size:9px; padding:1px 7px; border-radius:8px; font-weight:700;">3</span>'
+                row_bg = f"background:{PAL['rank3_bg']};"
             rows.append(f"""
             <tr style="{row_bg}">
-                <td style="padding:3px 6px; text-align:center; color:#888; font-size:11px;">{pos}</td>
-                <td style="padding:3px 6px; font-size:12px;"><span style="margin-right:4px;">{flag(x['team'])}</span>{x['team']}</td>
-                <td style="padding:3px 6px; text-align:center;">{badge}</td>
-                <td style="padding:3px 6px; text-align:center; font-weight:700; font-size:12px;">{x['pts']}</td>
-                <td style="padding:3px 6px; text-align:center; font-size:11px; color:#666;">{x['gd']:+d}</td>
+                <td style="padding:4px 6px; text-align:center; color:{PAL['muted']}; font-size:11px; font-variant-numeric:tabular-nums;">{pos}</td>
+                <td style="padding:4px 6px; font-size:12px; color:{PAL['text']};"><span style="margin-right:4px;">{flag(x['team'])}</span>{x['team']}</td>
+                <td style="padding:4px 6px; text-align:center;">{badge}</td>
+                <td style="padding:4px 6px; text-align:center; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums; color:{PAL['primary_d']};">{x['pts']}</td>
+                <td style="padding:4px 6px; text-align:center; font-size:11px; color:{PAL['muted']}; font-variant-numeric:tabular-nums;">{x['gd']:+d}</td>
             </tr>""")
         html.append(f"""
-        <div style="background:white; padding:10px 12px; border-radius:10px;
+        <div class="hover-lift" style="background:{PAL['card_alt']}; padding:12px 14px; border-radius:10px;
                     border:1px solid {PAL['border']};
-                    border-top:3px solid {conf_color(ranked[0]['team'])};">
-            <div style="font-weight:700; color:{PAL['primary_d']}; margin-bottom:6px; font-size:13px;">{group_label} {g}</div>
+                    border-top:3px solid {conf_color(ranked[0]['team'])};
+                    box-shadow:0 1px 4px {PAL['shadow']};
+                    transition:transform 0.15s ease, box-shadow 0.15s ease;">
+            <div style="font-family:{FONT_SERIF}; font-weight:600; color:{PAL['text']}; margin-bottom:8px; font-size:14px; letter-spacing:-0.005em;">{group_label} {g}</div>
             <table style="width:100%; border-collapse:collapse;">
-                <tr style="color:#aaa; font-size:10px;">
+                <tr style="color:{PAL['muted']}; font-size:10px; letter-spacing:0.5px;">
                     <td></td><td></td><td></td><td style="text-align:center;">{pts_label}</td><td style="text-align:center;">GD</td>
                 </tr>
                 {''.join(rows)}
@@ -915,10 +956,18 @@ body, .gradio-container {{
     background: {PAL['bg']} !important;
     color: {PAL['text']} !important;
     font-family: {FONT_SANS} !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }}
 .gradio-container {{
     max-width: 1280px !important;
     padding: 20px 32px !important;
+}}
+
+/* Selection — coral */
+::selection {{
+    background: {PAL['primary_l']};
+    color: {PAL['text']};
 }}
 
 /* Serif headers — Anthropic editorial feel */
@@ -949,16 +998,26 @@ body, .gradio-container {{
     color: white !important;
     border: 1px solid {PAL['primary_d']} !important;
     font-weight: 600 !important;
-    transition: background 0.15s ease;
+    letter-spacing: 0.2px;
+    transition: all 0.18s ease !important;
+    box-shadow: 0 1px 2px {PAL['shadow']} !important;
 }}
 .gradio-container button.primary:hover {{
     background: {PAL['primary_d']} !important;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px {PAL['shadow_lg']} !important;
+}}
+.gradio-container button.primary:active {{
+    transform: translateY(0);
+    box-shadow: 0 1px 2px {PAL['shadow']} !important;
 }}
 
 /* Tab nav — soft underline style */
 .gradio-container .tab-nav {{
     border-bottom: 1px solid {PAL['border']} !important;
-    margin-bottom: 16px !important;
+    margin-bottom: 20px !important;
+    gap: 4px !important;
+    flex-wrap: wrap;
 }}
 .gradio-container .tab-nav button {{
     font-weight: 600 !important;
@@ -966,6 +1025,14 @@ body, .gradio-container {{
     color: {PAL['muted']} !important;
     padding: 12px 18px !important;
     background: transparent !important;
+    border: 0 !important;
+    border-bottom: 2px solid transparent !important;
+    transition: color 0.15s ease, border-color 0.15s ease !important;
+    border-radius: 0 !important;
+}}
+.gradio-container .tab-nav button:hover {{
+    color: {PAL['text_2']} !important;
+    background: {PAL['soft_bg']}55 !important;
 }}
 .gradio-container .tab-nav button.selected {{
     color: {PAL['primary']} !important;
@@ -977,6 +1044,9 @@ body, .gradio-container {{
 .gradio-container input[type="range"]::-webkit-slider-thumb {{
     background: {PAL['primary']} !important;
 }}
+.gradio-container input[type="range"]::-moz-range-thumb {{
+    background: {PAL['primary']} !important;
+}}
 
 /* Dropdown / inputs — clean cream */
 .gradio-container input[type="text"],
@@ -986,10 +1056,65 @@ body, .gradio-container {{
     background: {PAL['card']} !important;
     border-color: {PAL['border']} !important;
     color: {PAL['text']} !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}}
+.gradio-container input[type="text"]:focus,
+.gradio-container input[type="number"]:focus,
+.gradio-container select:focus,
+.gradio-container textarea:focus {{
+    border-color: {PAL['primary']} !important;
+    box-shadow: 0 0 0 3px {PAL['primary']}22 !important;
+    outline: none !important;
 }}
 
 /* Section spacing — generous editorial */
 .gr-form, .gr-block {{ gap: 14px !important; }}
+
+/* Hover lift helper class — used on cards, chips */
+.hover-lift:hover {{
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px {PAL['shadow_lg']} !important;
+}}
+.player-card:hover {{
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px {PAL['shadow_lg']} !important;
+}}
+
+/* Radio buttons — chip style */
+.gradio-container .gr-form label.svelte-1ipelgc {{
+    border-radius: 20px !important;
+}}
+.gradio-container [role="radiogroup"] label {{
+    border-radius: 20px !important;
+    transition: all 0.15s ease;
+}}
+.gradio-container [role="radiogroup"] label:has(input:checked) {{
+    background: {PAL['primary']}1a !important;
+    border-color: {PAL['primary']} !important;
+    color: {PAL['primary_d']} !important;
+}}
+
+/* Checkbox — coral when checked */
+.gradio-container input[type="checkbox"] {{
+    accent-color: {PAL['primary']} !important;
+}}
+
+/* Plot container — consistent border */
+.gradio-container .js-plotly-plot {{
+    border-radius: 12px;
+}}
+
+/* Smoother scrolling */
+html {{ scroll-behavior: smooth; }}
+
+/* Mobile responsive tweaks */
+@media (max-width: 768px) {{
+    .gradio-container {{ padding: 12px 16px !important; }}
+    .gradio-container .tab-nav button {{
+        padding: 10px 12px !important;
+        font-size: 13px !important;
+    }}
+}}
 
 /* Spotify floating player */
 
@@ -1212,26 +1337,141 @@ with gr.Blocks(title="2026 WC Predictor", css=CSS, theme=_anthropic_theme) as ap
 
         # ============== Tab 6: About ==============
         with gr.Tab("ℹ️ About"):
-            gr.Markdown("""
-## Model evolution / 모델 진화 / Evolución del modelo
+            gr.HTML(f"""
+            <div style="max-width:960px;">
 
-| Phase | Try | Result |
-|-------|-----|--------|
-| 1~6 | Data + baseline v1 (ELO only) | 53.5% |
-| 7 | Recent Form (10-match GD/CS) | ✓ **+1.6pp → v2.9** |
-| 12 | ClubElo heuristic | ✓ → v3.0 |
-| 13 | Dixon-Coles τ | ✓ → **v3.5 (final)** |
-| 8, 9, 10, 11, 14, 15, 16 | Various attempts | ✗ All ineffective |
+                <!-- Hero -->
+                <div style="background:linear-gradient(135deg,{PAL['card']} 0%,{PAL['soft_bg']} 100%);
+                            padding:30px 32px; border-radius:14px; border:1px solid {PAL['border']}; margin-bottom:20px;">
+                    <div style="font-family:{FONT_SERIF}; font-size:28px; font-weight:600; color:{PAL['text']};
+                                letter-spacing:-0.01em; line-height:1.2; margin-bottom:6px;">
+                        About this project
+                    </div>
+                    <div style="color:{PAL['muted']}; font-size:14px; line-height:1.55; max-width:640px;">
+                        A data-driven 2026 FIFA World Cup forecasting system combining
+                        49K+ historical international matches, FIFA player ratings, and live club ELO into a
+                        Poisson regression model with Dixon-Coles correction.
+                    </div>
+                </div>
 
-## Data sources / 데이터 출처
-- Kaggle: 49,215 international matches + FIFA 23 player ratings (161K rows)
-- Wikipedia: WC2026 group draw + schedule
-- ClubElo: 630 European clubs, real-time ELO
+                <!-- Model evolution -->
+                <div style="display:flex; align-items:center; gap:10px; margin:20px 0 12px;">
+                    <span style="display:inline-block; width:5px; height:22px; background:{PAL['primary']}; border-radius:3px;"></span>
+                    <span style="font-family:{FONT_SERIF}; font-size:20px; font-weight:600; color:{PAL['text']};">Model evolution</span>
+                </div>
+                <div style="background:{PAL['card_alt']}; border:1px solid {PAL['border']}; border-radius:12px;
+                            padding:8px 8px; margin-bottom:20px; box-shadow:0 1px 4px {PAL['shadow']};">
+                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead>
+                            <tr style="color:{PAL['muted']}; font-size:10px; letter-spacing:1.5px; text-transform:uppercase;">
+                                <th style="padding:10px 14px; text-align:left;">Phase</th>
+                                <th style="padding:10px 14px; text-align:left;">Try</th>
+                                <th style="padding:10px 14px; text-align:right;">Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-top:1px solid {PAL['border']};">
+                                <td style="padding:10px 14px; font-variant-numeric:tabular-nums; color:{PAL['muted']};">1–6</td>
+                                <td style="padding:10px 14px;">Data + baseline v1 (ELO only)</td>
+                                <td style="padding:10px 14px; text-align:right; font-variant-numeric:tabular-nums;">53.5%</td>
+                            </tr>
+                            <tr style="border-top:1px solid {PAL['border']}; background:{PAL['rank1_bg']};">
+                                <td style="padding:10px 14px; font-variant-numeric:tabular-nums; color:{PAL['primary_d']}; font-weight:700;">7</td>
+                                <td style="padding:10px 14px;">Recent Form (10-match GD/CS)</td>
+                                <td style="padding:10px 14px; text-align:right; color:{PAL['primary_d']}; font-weight:700;">✓ +1.6pp → v2.9</td>
+                            </tr>
+                            <tr style="border-top:1px solid {PAL['border']};">
+                                <td style="padding:10px 14px; font-variant-numeric:tabular-nums; color:{PAL['primary_d']}; font-weight:700;">12</td>
+                                <td style="padding:10px 14px;">ClubElo heuristic</td>
+                                <td style="padding:10px 14px; text-align:right; color:{PAL['primary_d']};">✓ v3.0</td>
+                            </tr>
+                            <tr style="border-top:1px solid {PAL['border']}; background:{PAL['rank1_bg']};">
+                                <td style="padding:10px 14px; font-variant-numeric:tabular-nums; color:{PAL['primary_d']}; font-weight:700;">13</td>
+                                <td style="padding:10px 14px;">Dixon-Coles τ</td>
+                                <td style="padding:10px 14px; text-align:right; color:{PAL['primary_d']}; font-weight:700;">✓ v3.5 (final)</td>
+                            </tr>
+                            <tr style="border-top:1px solid {PAL['border']};">
+                                <td style="padding:10px 14px; font-variant-numeric:tabular-nums; color:{PAL['muted']};">8–11, 14–16</td>
+                                <td style="padding:10px 14px; color:{PAL['muted']};">Various attempts</td>
+                                <td style="padding:10px 14px; text-align:right; color:{PAL['muted']};">✗ Ineffective</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-## Links
-- GitHub: https://github.com/67JM89/soccer_similar_players
-- HF Space: https://huggingface.co/spaces/chrisung27/wc2026-predictor
-""")
+                <!-- Data sources -->
+                <div style="display:flex; align-items:center; gap:10px; margin:20px 0 12px;">
+                    <span style="display:inline-block; width:5px; height:22px; background:{PAL['primary']}; border-radius:3px;"></span>
+                    <span style="font-family:{FONT_SERIF}; font-size:20px; font-weight:600; color:{PAL['text']};">Data sources</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-bottom:20px;">
+                    <div class="hover-lift" style="background:{PAL['card_alt']}; padding:16px 18px; border-radius:12px;
+                                border:1px solid {PAL['border']}; transition:transform 0.15s ease, box-shadow 0.15s ease;
+                                box-shadow:0 1px 4px {PAL['shadow']};">
+                        <div style="font-size:24px;">⚽</div>
+                        <div style="font-family:{FONT_SERIF}; font-size:15px; font-weight:600; color:{PAL['text']}; margin-top:6px;">International matches</div>
+                        <div style="color:{PAL['muted']}; font-size:12px; margin-top:4px;">Kaggle · 49,215 rows</div>
+                    </div>
+                    <div class="hover-lift" style="background:{PAL['card_alt']}; padding:16px 18px; border-radius:12px;
+                                border:1px solid {PAL['border']}; transition:transform 0.15s ease, box-shadow 0.15s ease;
+                                box-shadow:0 1px 4px {PAL['shadow']};">
+                        <div style="font-size:24px;">👤</div>
+                        <div style="font-family:{FONT_SERIF}; font-size:15px; font-weight:600; color:{PAL['text']}; margin-top:6px;">FIFA 23 player data</div>
+                        <div style="color:{PAL['muted']}; font-size:12px; margin-top:4px;">Kaggle · 161K player-rows</div>
+                    </div>
+                    <div class="hover-lift" style="background:{PAL['card_alt']}; padding:16px 18px; border-radius:12px;
+                                border:1px solid {PAL['border']}; transition:transform 0.15s ease, box-shadow 0.15s ease;
+                                box-shadow:0 1px 4px {PAL['shadow']};">
+                        <div style="font-size:24px;">📅</div>
+                        <div style="font-family:{FONT_SERIF}; font-size:15px; font-weight:600; color:{PAL['text']}; margin-top:6px;">WC2026 schedule</div>
+                        <div style="color:{PAL['muted']}; font-size:12px; margin-top:4px;">Wikipedia · group draw</div>
+                    </div>
+                    <div class="hover-lift" style="background:{PAL['card_alt']}; padding:16px 18px; border-radius:12px;
+                                border:1px solid {PAL['border']}; transition:transform 0.15s ease, box-shadow 0.15s ease;
+                                box-shadow:0 1px 4px {PAL['shadow']};">
+                        <div style="font-size:24px;">🏟️</div>
+                        <div style="font-family:{FONT_SERIF}; font-size:15px; font-weight:600; color:{PAL['text']}; margin-top:6px;">Club ELO ratings</div>
+                        <div style="color:{PAL['muted']}; font-size:12px; margin-top:4px;">ClubElo · 630 clubs, live</div>
+                    </div>
+                </div>
+
+                <!-- Links -->
+                <div style="display:flex; align-items:center; gap:10px; margin:20px 0 12px;">
+                    <span style="display:inline-block; width:5px; height:22px; background:{PAL['primary']}; border-radius:3px;"></span>
+                    <span style="font-family:{FONT_SERIF}; font-size:20px; font-weight:600; color:{PAL['text']};">Links</span>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+                    <a href="https://github.com/67JM89/soccer_similar_players" target="_blank" rel="noopener"
+                       class="hover-lift" style="display:inline-flex; align-items:center; gap:8px;
+                              background:{PAL['card_alt']}; border:1px solid {PAL['border']};
+                              padding:10px 18px; border-radius:10px; text-decoration:none; color:{PAL['text']};
+                              font-size:13px; font-weight:600; transition:transform 0.15s ease, box-shadow 0.15s ease;
+                              box-shadow:0 1px 4px {PAL['shadow']};">
+                        <span style="font-size:18px;">🐙</span> GitHub repository
+                    </a>
+                    <a href="https://huggingface.co/spaces/67JM89/wc2026-predictor" target="_blank" rel="noopener"
+                       class="hover-lift" style="display:inline-flex; align-items:center; gap:8px;
+                              background:{PAL['primary']}; border:1px solid {PAL['primary_d']};
+                              padding:10px 18px; border-radius:10px; text-decoration:none; color:white;
+                              font-size:13px; font-weight:600; transition:transform 0.15s ease, box-shadow 0.15s ease;
+                              box-shadow:0 1px 4px {PAL['shadow']};">
+                        <span style="font-size:18px;">🤗</span> Hugging Face Space
+                    </a>
+                </div>
+
+                <!-- Disclaimer -->
+                <div style="background:{PAL['soft_bg']}; border-left:4px solid {PAL['accent']};
+                            padding:12px 16px; border-radius:8px; font-size:12px; color:{PAL['text_2']};
+                            display:flex; align-items:flex-start; gap:10px;">
+                    <span style="font-size:16px; line-height:1;">⚠️</span>
+                    <span>
+                        Predictions are statistical — backtested ~55% accuracy on 895 major-tournament matches.
+                        For entertainment / educational use only, not betting advice.
+                    </span>
+                </div>
+
+            </div>
+            """)
 
     # ─── Language change wiring ───
     lang_dropdown.change(
