@@ -441,10 +441,16 @@ def render_hero(lang):
                 <div style="font-size:10px; letter-spacing:1.4px; color:{PAL['muted']}; font-weight:600;">{t('metric_players', lang)}</div>
                 <div style="font-size:26px; font-weight:800; margin-top:2px; color:{PAL['primary_d']};">{n_players:,}</div>
             </div>
-            <div style="background:white; padding:12px 16px; border-radius:12px; border:1px solid {PAL['border']};">
+            <div style="background:white; padding:12px 16px; border-radius:12px; border:1px solid {PAL['border']};"
+                 title="{t('accuracy_context', lang)}">
                 <div style="font-size:10px; letter-spacing:1.4px; color:{PAL['muted']}; font-weight:600;">{t('metric_accuracy', lang)}</div>
                 <div style="font-size:26px; font-weight:800; margin-top:2px; color:{PAL['accent']};">~55%</div>
+                <div style="font-size:10px; color:{PAL['muted']}; margin-top:2px; line-height:1.3;">{t('accuracy_context', lang)}</div>
             </div>
+        </div>
+        <div style="margin-top:14px; padding-top:12px; border-top:1px dashed {PAL['border']};
+                    font-size:11px; color:{PAL['muted']}; display:flex; align-items:center; gap:6px;">
+            <span>{t('data_freshness', lang)}</span>
         </div>
     </div>
     """
@@ -465,7 +471,7 @@ def render_section_header(text, color=None):
 
 
 # ============================== Player Cards ==============================
-def get_team_squad(team, top_n=25, position_filter="All"):
+def get_team_squad(team, top_n=25, position_filter="All", search_query=""):
     conn = sqlite3.connect(DB_PATH)
     al = pd.read_sql("SELECT canonical, fifa_name FROM nation_aliases", conn)
     alias = dict(zip(al["canonical"], al["fifa_name"]))
@@ -492,6 +498,12 @@ def get_team_squad(team, top_n=25, position_filter="All"):
         df = df[df["is_gk"] == 0]
         df = df[df["player_positions"].fillna("").apply(
             lambda p: any(x in p for x in groups[position_filter]))]
+    if search_query and search_query.strip():
+        q = search_query.strip().lower()
+        df = df[
+            df["short_name"].fillna("").str.lower().str.contains(q, regex=False)
+            | df["long_name"].fillna("").str.lower().str.contains(q, regex=False)
+        ]
     return df.head(top_n).reset_index(drop=True)
 
 
@@ -572,8 +584,8 @@ def render_card(row):
     """
 
 
-def render_team_squad(team, position_filter, lang):
-    df = get_team_squad(team, top_n=25, position_filter=position_filter)
+def render_team_squad(team, position_filter, lang, search_query=""):
+    df = get_team_squad(team, top_n=25, position_filter=position_filter, search_query=search_query)
     if len(df) == 0:
         return f"<p style='padding:20px;'>{t('no_players', lang)}</p>"
     cards = "".join(render_card(row) for _, row in df.iterrows())
@@ -736,8 +748,13 @@ def render_bracket(result, lang):
     return f"""
     {champ_card}
     <div style="background:linear-gradient(180deg,{PAL['soft_bg']},#ffffff);
-                padding:18px 12px; border-radius:14px; border:1px solid {PAL['border']};">
-        <div style="display:flex; gap:14px; overflow-x:auto; align-items:stretch;">{''.join(cols)}</div>
+                padding:18px 12px; border-radius:14px; border:1px solid {PAL['border']}; position:relative;">
+        <div class="bracket-scroll" style="display:flex; gap:14px; overflow-x:auto; align-items:stretch;
+                    -webkit-overflow-scrolling:touch; scroll-behavior:smooth; padding-bottom:8px;">{''.join(cols)}</div>
+        <div class="bracket-swipe-hint" style="text-align:center; font-size:10px; color:{PAL['muted']};
+                    margin-top:8px; letter-spacing:0.5px; display:none;">
+            {t('swipe_hint', lang)}
+        </div>
     </div>
     """
 
@@ -786,10 +803,22 @@ def render_groups_results(result, lang):
 
 
 # ============================== Match Predictor ==============================
+def make_narrative(team_a, team_b, r, lang):
+    """One-line plain-English summary of who's favored and how strongly."""
+    p_a, p_b = r["p_a_win"], r["p_b_win"]
+    diff = p_a - p_b
+    if abs(diff) < 0.08:
+        return t("narrative_even", lang)
+    fav = team_a if diff > 0 else team_b
+    template = t("narrative_strong" if abs(diff) > 0.20 else "narrative_slight", lang)
+    return template.replace("{team}", f"{flag(fav)} {fav}")
+
+
 def render_match_summary(team_a, team_b, r, lang):
     info_a = CONFED_INFO.get(conf_of(team_a), {"color":"#888","icon":""})
     info_b = CONFED_INFO.get(conf_of(team_b), {"color":"#888","icon":""})
     elo_diff = r["elo_a"] - r["elo_b"]
+    narrative = make_narrative(team_a, team_b, r, lang)
     def side(team, info, elo):
         return f"""
         <div style="flex:1; text-align:center; padding:16px;">
@@ -805,7 +834,7 @@ def render_match_summary(team_a, team_b, r, lang):
         """
     return f"""
     <div style="background:white; border-radius:16px; padding:18px 24px;
-                border:1px solid {PAL['border']}; box-shadow:0 2px 10px rgba(91,142,196,0.08);">
+                border:1px solid {PAL['border']}; box-shadow:0 2px 10px {PAL['shadow']};">
         <div style="display:flex; align-items:center; gap:8px;">
             {side(team_a, info_a, r['elo_a'])}
             <div style="text-align:center; padding:0 10px; min-width:160px;">
@@ -824,6 +853,12 @@ def render_match_summary(team_a, team_b, r, lang):
                 </div>
             </div>
             {side(team_b, info_b, r['elo_b'])}
+        </div>
+        <div style="margin-top:14px; padding:10px 14px; background:{PAL['soft_bg']};
+                    border-radius:10px; border-left:3px solid {PAL['primary']};
+                    font-family:{FONT_SERIF}; font-size:15px; color:{PAL['text']}; text-align:center;
+                    letter-spacing:-0.005em;">
+            {narrative}
         </div>
     </div>
     """
@@ -901,13 +936,56 @@ def quick_pick(label):
     return "Spain", "Argentina"
 
 
-def run_bracket(seed, lang):
+def render_scenario_history(history, lang):
+    """history: list of dicts {seed, champion, runner}, most recent first."""
+    if not history:
+        return ""
+    chips = []
+    for i, h in enumerate(history):
+        chips.append(f"""
+        <div class="hover-lift" style="display:inline-flex; align-items:center; gap:8px;
+                    background:{PAL['card_alt']}; border:1px solid {PAL['border']};
+                    padding:8px 14px; border-radius:20px; box-shadow:0 1px 3px {PAL['shadow']};
+                    transition:transform 0.15s ease, box-shadow 0.15s ease;">
+            <span style="font-size:10px; color:{PAL['muted']}; letter-spacing:0.5px; font-variant-numeric:tabular-nums;">
+                #{h['seed']}
+            </span>
+            <span style="font-size:16px;">{flag(h['champion'])}</span>
+            <span style="font-size:12px; color:{PAL['text_2']}; font-weight:600;">{h['champion']}</span>
+        </div>
+        """)
+    return f"""
+    <div style="margin-top:14px; padding:12px 16px; background:{PAL['soft_bg']};
+                border-radius:10px; border:1px solid {PAL['border']};">
+        <div style="font-size:10px; color:{PAL['muted']}; letter-spacing:1.5px;
+                    font-weight:700; text-transform:uppercase; margin-bottom:8px;">
+            {t('recent_scenarios', lang)}
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">{''.join(chips)}</div>
+    </div>
+    """
+
+
+def run_bracket(seed, lang, history_json=""):
+    import json
     r = simulate_one_bracket(int(seed))
-    return render_bracket(r, lang), render_groups_results(r, lang)
+    bracket_html = render_bracket(r, lang)
+    groups_html = render_groups_results(r, lang)
+    try:
+        history = json.loads(history_json) if history_json else []
+    except Exception:
+        history = []
+    entry = {"seed": int(seed), "champion": r["champion"], "runner": r["runner"]}
+    # dedupe by seed; keep most recent 3
+    history = [h for h in history if h.get("seed") != entry["seed"]]
+    history.insert(0, entry)
+    history = history[:3]
+    hist_html = render_scenario_history(history, lang)
+    return bracket_html, groups_html, hist_html, json.dumps(history)
 
 
 # ============================== Language change updates ==============================
-def update_language(lang, current_team_a, current_team_b, neutral, current_squad_team, current_pos, current_seed, current_top_n):
+def update_language(lang, current_team_a, current_team_b, neutral, current_squad_team, current_pos, current_seed, current_top_n, current_search):
     """Re-render all language-dependent components."""
     hero = render_hero(lang)
     podium = render_podium(lang)
@@ -917,15 +995,15 @@ def update_language(lang, current_team_a, current_team_b, neutral, current_squad
     outright = fig_outright_bar(current_top_n, lang)
     stage_hm = fig_stage_heatmap(lang)
     groups_fig = fig_group_visualizer(lang)
-    squad = render_team_squad(current_squad_team, current_pos, lang)
-    bracket, groups_res = run_bracket(current_seed, lang)
-    # Section headers
+    squad = render_team_squad(current_squad_team, current_pos, lang, current_search)
+    bracket, groups_res, _hist_html, _hist_json = run_bracket(current_seed, lang, "")
+    hint = (f'<div style="text-align:center; font-size:11px; color:{PAL["muted"]}; '
+            f'margin:-4px 0 8px; letter-spacing:0.3px;">💡 {t("auto_updates", lang)}</div>')
     return (
         hero, podium, legend, legend2,
         summary, donut, heat, top_scores, why,
         outright, stage_hm, groups_fig, squad,
         bracket, groups_res,
-        # Markdown texts
         render_section_header(t("outright_section", lang)),
         render_section_header(t("stage_section", lang)),
         render_section_header(t("groups_section", lang) + " · " + t("groups_subdesc", lang)),
@@ -933,6 +1011,7 @@ def update_language(lang, current_team_a, current_team_b, neutral, current_squad
         f"### {t('bracket_section', lang)}\n*{t('bracket_desc', lang)}*",
         f"### {t('group_results', lang)}",
         f"### {t('match_intro', lang)}",
+        hint,
     )
 
 
@@ -943,7 +1022,7 @@ LEGEND_HTML = render_confed_legend(DEFAULT_LANG)
 STAGE_FIG = fig_stage_heatmap(DEFAULT_LANG)
 GROUPS_FIG = fig_group_visualizer(DEFAULT_LANG)
 OUTRIGHT_FIG = fig_outright_bar(20, DEFAULT_LANG)
-INIT_BRACKET, INIT_GROUPS_RES = run_bracket(42, DEFAULT_LANG)
+INIT_BRACKET, INIT_GROUPS_RES, INIT_HISTORY_HTML, INIT_HISTORY_JSON = run_bracket(42, DEFAULT_LANG, "")
 INIT_SQUAD = render_team_squad("Spain", "All", DEFAULT_LANG)
 INIT_SUM, INIT_DONUT, INIT_HEAT, INIT_TOP, INIT_WHY = predict_match("Spain", "Argentina", True, DEFAULT_LANG)
 
@@ -1107,6 +1186,12 @@ body, .gradio-container {{
 /* Smoother scrolling */
 html {{ scroll-behavior: smooth; }}
 
+/* Bracket horizontal-scroll polish */
+.bracket-scroll::-webkit-scrollbar {{ height: 6px; }}
+.bracket-scroll::-webkit-scrollbar-track {{ background: {PAL['soft_bg']}; border-radius: 3px; }}
+.bracket-scroll::-webkit-scrollbar-thumb {{ background: {PAL['primary_l']}; border-radius: 3px; }}
+.bracket-scroll::-webkit-scrollbar-thumb:hover {{ background: {PAL['primary']}; }}
+
 /* Mobile responsive tweaks */
 @media (max-width: 768px) {{
     .gradio-container {{ padding: 12px 16px !important; }}
@@ -1114,6 +1199,7 @@ html {{ scroll-behavior: smooth; }}
         padding: 10px 12px !important;
         font-size: 13px !important;
     }}
+    .bracket-swipe-hint {{ display: block !important; }}
 }}
 
 /* Spotify floating player */
@@ -1180,6 +1266,64 @@ html {{ scroll-behavior: smooth; }}
     #spotify-fab.expanded {{ width: calc(100vw - 40px); }}
 }}
 @media print {{ #spotify-fab {{ display: none; }} }}
+"""
+
+_LANG_LABELS_JS = {code: name for code, name in LANGUAGES}
+import json as _json
+LANG_LABELS_JSON = _json.dumps(_LANG_LABELS_JS, ensure_ascii=False)
+
+AUTO_LANG_JS = f"""
+<script>
+(function() {{
+    const LABELS = {LANG_LABELS_JSON};
+    const SUPPORTED = Object.keys(LABELS);
+    try {{
+        if (localStorage.getItem('wcLangChosenByUser') === '1') return;
+    }} catch(_) {{}}
+    const nav = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+    const code = nav.split('-')[0];
+    if (!SUPPORTED.includes(code) || code === 'en') return;
+    const target = LABELS[code];
+    const tryApply = function(remaining) {{
+        if (remaining <= 0) return;
+        const inputs = document.querySelectorAll('.gradio-container input[role="combobox"], .gradio-container input[aria-haspopup="listbox"]');
+        let found = null;
+        inputs.forEach(function(el) {{
+            const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+            if (aria.includes('language') || aria.includes('언어') || aria.includes('idioma')
+                || aria.includes('langue') || aria.includes('lingua') || aria.includes('言語')
+                || aria.includes('语言') || aria.includes('🌍')) {{
+                found = el;
+            }}
+        }});
+        if (!found) {{ setTimeout(function() {{ tryApply(remaining - 1); }}, 400); return; }}
+        // Open the dropdown
+        found.focus();
+        found.click();
+        setTimeout(function() {{
+            const options = document.querySelectorAll('.gradio-container [role="option"], .gradio-container ul[role="listbox"] li');
+            let matched = null;
+            options.forEach(function(o) {{
+                if (o.textContent && o.textContent.trim() === target.trim()) matched = o;
+            }});
+            if (matched) {{
+                matched.click();
+                try {{ localStorage.setItem('wcLangAutoDetected', code); }} catch(_) {{}}
+            }} else {{
+                document.body.click();  // close dropdown if no match
+            }}
+        }}, 300);
+    }};
+    setTimeout(function() {{ tryApply(8); }}, 1500);
+    // Track explicit user choice
+    document.addEventListener('change', function(e) {{
+        const aria = (e.target.getAttribute && (e.target.getAttribute('aria-label') || '')).toLowerCase();
+        if (aria.includes('language') || aria.includes('언어') || aria.includes('🌍')) {{
+            try {{ localStorage.setItem('wcLangChosenByUser', '1'); }} catch(_) {{}}
+        }}
+    }}, true);
+}})();
+</script>
 """
 
 SPOTIFY_HTML_BLOCK = f"""
@@ -1275,12 +1419,15 @@ with gr.Blocks(title="2026 WC Predictor", css=CSS, theme=_anthropic_theme) as ap
 
             with gr.Row():
                 quick = gr.Radio(choices=[lbl for lbl, _, _ in QUICK_PAIRS],
-                                 label=t("quick_pick", DEFAULT_LANG), scale=4)
+                                 label=t("quick_pick", DEFAULT_LANG), scale=5)
                 neutral = gr.Checkbox(value=True, label=t("neutral", DEFAULT_LANG), scale=1)
-                btn = gr.Button(t("predict", DEFAULT_LANG), variant="primary", size="lg", scale=1)
             with gr.Row():
                 team_a = gr.Dropdown(WC_TEAMS, value="Spain", label=t("team_a", DEFAULT_LANG))
                 team_b = gr.Dropdown(WC_TEAMS, value="Argentina", label=t("team_b", DEFAULT_LANG))
+            auto_update_hint = gr.HTML(
+                value=f'<div style="text-align:center; font-size:11px; color:{PAL["muted"]}; '
+                      f'margin:-4px 0 8px; letter-spacing:0.3px;">💡 {t("auto_updates", DEFAULT_LANG)}</div>'
+            )
 
             summary_html = gr.HTML(value=INIT_SUM)
             with gr.Row():
@@ -1290,8 +1437,6 @@ with gr.Blocks(title="2026 WC Predictor", css=CSS, theme=_anthropic_theme) as ap
             why_html = gr.HTML(value=INIT_WHY)
 
             quick.change(quick_pick, inputs=[quick], outputs=[team_a, team_b])
-            btn.click(predict_match, inputs=[team_a, team_b, neutral, lang_dropdown],
-                      outputs=[summary_html, donut_plot, heatmap_plot, top_scores_plot, why_html])
             for inp in [team_a, team_b, neutral]:
                 inp.change(predict_match, inputs=[team_a, team_b, neutral, lang_dropdown],
                            outputs=[summary_html, donut_plot, heatmap_plot, top_scores_plot, why_html])
@@ -1320,20 +1465,33 @@ with gr.Blocks(title="2026 WC Predictor", css=CSS, theme=_anthropic_theme) as ap
                 squad_team = gr.Dropdown(WC_TEAMS, value="Spain", label=t("country", DEFAULT_LANG), scale=2)
                 pos_filter = gr.Radio(["All","GK","DEF","MID","ATT"], value="All",
                                        label=t("position_filter", DEFAULT_LANG), scale=3)
+            player_search = gr.Textbox(
+                value="",
+                label=t("player_search", DEFAULT_LANG),
+                placeholder=t("player_search_placeholder", DEFAULT_LANG),
+                show_label=True,
+            )
             squad_html = gr.HTML(value=INIT_SQUAD)
-            squad_team.change(render_team_squad, inputs=[squad_team, pos_filter, lang_dropdown], outputs=[squad_html])
-            pos_filter.change(render_team_squad, inputs=[squad_team, pos_filter, lang_dropdown], outputs=[squad_html])
+            squad_team.change(render_team_squad, inputs=[squad_team, pos_filter, lang_dropdown, player_search], outputs=[squad_html])
+            pos_filter.change(render_team_squad, inputs=[squad_team, pos_filter, lang_dropdown, player_search], outputs=[squad_html])
+            player_search.change(render_team_squad, inputs=[squad_team, pos_filter, lang_dropdown, player_search], outputs=[squad_html])
 
         # ============== Tab 5: Bracket Simulator ==============
         with gr.Tab("🎲 Bracket Simulator"):
             bracket_md = gr.Markdown(f"### {t('bracket_section', DEFAULT_LANG)}\n*{t('bracket_desc', DEFAULT_LANG)}*")
             with gr.Row():
-                seed_in = gr.Slider(1, 1000, value=42, step=1, label=t("seed_label", DEFAULT_LANG), scale=4)
-                bracket_btn = gr.Button(t("new_scenario", DEFAULT_LANG), variant="primary", scale=1)
+                seed_in = gr.Slider(1, 1000, value=42, step=1, label=t("scenario_label", DEFAULT_LANG), scale=4)
+                bracket_btn = gr.Button(t("new_scenario_btn", DEFAULT_LANG), variant="primary", scale=1)
+            history_state = gr.State(value=INIT_HISTORY_JSON)
+            history_html = gr.HTML(value=INIT_HISTORY_HTML)
             bracket_html = gr.HTML(value=INIT_BRACKET)
             groups_results_md = gr.Markdown(f"### {t('group_results', DEFAULT_LANG)}")
             groups_results_html = gr.HTML(value=INIT_GROUPS_RES)
-            bracket_btn.click(run_bracket, inputs=[seed_in, lang_dropdown], outputs=[bracket_html, groups_results_html])
+            bracket_btn.click(
+                run_bracket,
+                inputs=[seed_in, lang_dropdown, history_state],
+                outputs=[bracket_html, groups_results_html, history_html, history_state],
+            )
 
         # ============== Tab 6: About ==============
         with gr.Tab("ℹ️ About"):
@@ -1476,7 +1634,7 @@ with gr.Blocks(title="2026 WC Predictor", css=CSS, theme=_anthropic_theme) as ap
     # ─── Language change wiring ───
     lang_dropdown.change(
         update_language,
-        inputs=[lang_dropdown, team_a, team_b, neutral, squad_team, pos_filter, seed_in, top_n],
+        inputs=[lang_dropdown, team_a, team_b, neutral, squad_team, pos_filter, seed_in, top_n, player_search],
         outputs=[
             hero, podium, legend1, legend2,
             summary_html, donut_plot, heatmap_plot, top_scores_plot, why_html,
@@ -1484,11 +1642,12 @@ with gr.Blocks(title="2026 WC Predictor", css=CSS, theme=_anthropic_theme) as ap
             bracket_html, groups_results_html,
             outright_header, stage_header, group_header,
             players_md, bracket_md, groups_results_md, match_intro_md,
+            auto_update_hint,
         ],
     )
 
-    # ─── Spotify floating player (injected at end of app) ───
-    gr.HTML(SPOTIFY_HTML_BLOCK)
+    # ─── Auto-detect browser language + Spotify floating player ───
+    gr.HTML(AUTO_LANG_JS + SPOTIFY_HTML_BLOCK)
 
 if __name__ == "__main__":
     app.launch(server_name="0.0.0.0", server_port=7860, inbrowser=False, show_error=True)
