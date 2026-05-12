@@ -477,18 +477,25 @@ def get_team_squad(team, top_n=25, position_filter="All", search_query=""):
     alias = dict(zip(al["canonical"], al["fifa_name"]))
     fifa_name = alias.get(team, team)
     df = pd.read_sql("""
-        SELECT short_name, long_name, club_name, league_name, age,
-               height_cm, weight_kg, player_positions, preferred_foot,
-               overall, potential, value_eur, wage_eur, is_gk,
-               atk_finishing, atk_shooting, atk_dribbling, atk_vision,
-               def_tackling, def_marking, def_interceptions, def_aggression,
-               phy_pace, phy_strength, phy_stamina, phy_jumping,
-               gkdist_kicking, gkdist_handling, gkdist_positioning, gkdist_reflexes,
-               gksave_diving, gksave_handling, gksave_reflexes, gksave_speed,
-               score_atk, score_def, score_phy, score_gk_dist, score_gk_save
-        FROM players WHERE LOWER(nationality_name) = LOWER(?)
-        ORDER BY overall DESC LIMIT 40
-    """, conn, params=(fifa_name,))
+        SELECT p.short_name, p.long_name, p.club_name AS fifa_club, p.league_name, p.age,
+               p.height_cm, p.weight_kg, p.player_positions, p.preferred_foot,
+               p.overall, p.potential, p.value_eur, p.wage_eur, p.is_gk,
+               p.atk_finishing, p.atk_shooting, p.atk_dribbling, p.atk_vision,
+               p.def_tackling, p.def_marking, p.def_interceptions, p.def_aggression,
+               p.phy_pace, p.phy_strength, p.phy_stamina, p.phy_jumping,
+               p.gkdist_kicking, p.gkdist_handling, p.gkdist_positioning, p.gkdist_reflexes,
+               p.gksave_diving, p.gksave_handling, p.gksave_reflexes, p.gksave_speed,
+               p.score_atk, p.score_def, p.score_phy, p.score_gk_dist, p.score_gk_save,
+               tm.current_club AS tm_club, tm.market_value_eur AS tm_mv,
+               tm.is_injured AS tm_injured, tm.position AS tm_position
+        FROM players p
+        LEFT JOIN tm_player_link tlink ON tlink.fifa_short_name = p.short_name AND tlink.team = ?
+        LEFT JOIN tm_squads tm ON tm.tm_player_id = tlink.tm_player_id
+        WHERE LOWER(p.nationality_name) = LOWER(?)
+        ORDER BY p.overall DESC LIMIT 40
+    """, conn, params=(team, fifa_name,))
+    # Compose club_name preferring TM (fresher), fallback to FIFA
+    df["club_name"] = df["tm_club"].fillna(df["fifa_club"])
     conn.close()
     if position_filter == "GK":
         df = df[df["is_gk"] == 1]
@@ -522,6 +529,15 @@ def stat_bar(name, value):
     """
 
 
+def format_mv(mv: float) -> str:
+    """Format market value as €Xm or €Xk."""
+    if mv is None or pd.isna(mv) or mv <= 0:
+        return ""
+    if mv >= 1_000_000:
+        return f"€{mv/1_000_000:.0f}m" if mv >= 10_000_000 else f"€{mv/1_000_000:.1f}m"
+    return f"€{mv/1_000:.0f}k"
+
+
 def render_card(row):
     is_gk = int(row["is_gk"]) == 1
     name = row["short_name"] or row["long_name"]
@@ -532,6 +548,9 @@ def render_card(row):
     position = (row["player_positions"] or "—").split(",")[0].strip()
     foot = row["preferred_foot"] or ""
     height = f"{int(row['height_cm'])}cm" if not pd.isna(row["height_cm"]) else ""
+    mv_str = format_mv(row.get("tm_mv"))
+    is_injured = bool(row.get("tm_injured"))
+    has_tm = bool(row.get("tm_club"))
 
     if is_gk:
         c1 = ("🥅 Distribution", row["score_gk_dist"], [("Kicking", row["gkdist_kicking"]), ("Handling", row["gkdist_handling"]),
@@ -560,10 +579,25 @@ def render_card(row):
         </div>
         """
 
+    # Indicators (top-right corner)
+    indicators = []
+    if is_injured:
+        indicators.append(f'<span title="Currently injured" style="background:#A8453B; color:white; font-size:9px; padding:2px 7px; border-radius:10px; font-weight:700; letter-spacing:0.3px;">⚕ INJ</span>')
+    if mv_str:
+        indicators.append(f'<span title="Transfermarkt market value (live)" style="background:{PAL["soft_bg"]}; color:{PAL["text_2"]}; font-size:10px; padding:2px 7px; border-radius:10px; font-weight:700; font-variant-numeric:tabular-nums; border:1px solid {PAL["border"]};">{mv_str}</span>')
+    indicator_bar = (f'<div style="display:flex; gap:4px; justify-content:flex-end; margin-bottom:6px;">{"".join(indicators)}</div>'
+                     if indicators else '')
+
+    # Club line — add a small "live" dot if from TM
+    club_marker = (f'<span title="Current club (Transfermarkt, live)" style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#588157; margin-right:4px; vertical-align:middle;"></span>'
+                   if has_tm else '')
+
     return f"""
     <div class="player-card" style="background:{PAL['card_alt']}; border-radius:12px; padding:14px;
                 box-shadow:0 2px 10px {PAL['shadow']}; border:1px solid {PAL['border']};
-                border-top:4px solid {oc}; transition:transform 0.18s ease, box-shadow 0.18s ease;">
+                border-top:4px solid {oc}; transition:transform 0.18s ease, box-shadow 0.18s ease;
+                {'opacity:0.78;' if is_injured else ''}">
+        {indicator_bar}
         <div style="display:flex; gap:12px; margin-bottom:12px;">
             <div style="background:linear-gradient(135deg,{oc},{oc}d0); color:white; width:56px; height:56px;
                         border-radius:10px; display:flex; align-items:center; justify-content:center;
@@ -573,7 +607,7 @@ def render_card(row):
                 <div style="font-family:{FONT_SERIF}; font-size:15px; font-weight:600; color:{PAL['text']};
                             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:-0.01em;">{name}</div>
                 <div style="font-size:11px; color:{PAL['muted']}; margin-top:2px;
-                            overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{club}</div>
+                            overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{club_marker}{club}</div>
                 <div style="font-size:10px; color:{PAL['muted']}; margin-top:4px; letter-spacing:0.3px;">
                     <b style="color:{PAL['primary_d']};">{position}</b> · {age}y · {height}{(' · ' + foot[0]) if foot else ''}
                 </div>
@@ -591,8 +625,14 @@ def render_team_squad(team, position_filter, lang, search_query=""):
     cards = "".join(render_card(row) for _, row in df.iterrows())
     n_gk = int(df["is_gk"].sum())
     avg = df["overall"].mean()
+    n_injured = int(df["tm_injured"].fillna(0).sum()) if "tm_injured" in df.columns else 0
+    n_live = int(df["tm_club"].notna().sum()) if "tm_club" in df.columns else 0
+    total_mv_m = (df["tm_mv"].fillna(0).sum() / 1_000_000) if "tm_mv" in df.columns else 0
     cinfo = CONFED_INFO.get(conf_of(team), {"color":"#888","icon":""})
     cname = conf_name(team, lang)
+
+    injury_pill = (f'<div style="display:inline-flex; align-items:center; gap:6px; background:rgba(168,69,59,0.85); padding:4px 12px; border-radius:14px; font-size:11px; font-weight:700; letter-spacing:0.3px;">⚕ {n_injured} {t("injured_count", lang)}</div>'
+                   if n_injured > 0 else '')
 
     header = f"""
     <div style="background:linear-gradient(135deg,{cinfo['color']},{cinfo['color']}dd);
@@ -600,24 +640,29 @@ def render_team_squad(team, position_filter, lang, search_query=""):
                 display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div>
             <div style="font-family:{FONT_SERIF}; font-size:32px; font-weight:600; letter-spacing:-0.01em;">{flag(team)} {team}</div>
-            <div style="font-size:12px; opacity:0.92; margin-top:6px; font-family:{FONT_SANS};">
-                {cinfo['icon']} {conf_of(team)} · {cname}
+            <div style="font-size:12px; opacity:0.92; margin-top:6px; font-family:{FONT_SANS}; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span>{cinfo['icon']} {conf_of(team)} · {cname}</span>
+                {injury_pill}
             </div>
         </div>
-        <div style="display:flex; gap:18px;">
+        <div style="display:flex; gap:18px; flex-wrap:wrap;">
             <div><div style="font-size:10px; opacity:0.8; letter-spacing:1px;">{t('players_count', lang)}</div>
                 <div style="font-size:24px; font-weight:800;">{len(df)}</div></div>
             <div><div style="font-size:10px; opacity:0.8; letter-spacing:1px;">{t('avg_overall', lang)}</div>
                 <div style="font-size:24px; font-weight:800;">{avg:.1f}</div></div>
             <div><div style="font-size:10px; opacity:0.8; letter-spacing:1px;">{t('gk_count', lang)}</div>
                 <div style="font-size:24px; font-weight:800;">{n_gk}</div></div>
+            {f'<div title="Total TM market value of top 25 squad"><div style="font-size:10px; opacity:0.8; letter-spacing:1px;">{t("squad_value", lang)}</div><div style="font-size:24px; font-weight:800; font-variant-numeric:tabular-nums;">€{total_mv_m:.0f}m</div></div>' if total_mv_m > 0 else ''}
         </div>
     </div>
     <div style="background:{PAL['soft_bg']}; border-left:4px solid {PAL['accent']};
                 padding:12px 16px; border-radius:8px; margin-bottom:14px; font-size:12px;
-                color:{PAL['text_2']}; display:flex; align-items:center; gap:10px;">
-        <span style="font-size:16px;">ℹ️</span>
-        <span>{t('data_disclaimer', lang)}</span>
+                color:{PAL['text_2']};">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+            <span style="font-size:16px;">ℹ️</span>
+            <span>{t('data_disclaimer', lang)}</span>
+        </div>
+        {f'<div style="display:flex; align-items:center; gap:8px; padding-top:6px; border-top:1px dashed {PAL["border"]}; font-size:11px;"><span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#588157;"></span><span>{t("live_data_note", lang).format(n=n_live)}</span></div>' if n_live > 0 else ''}
     </div>
     """
     grid = f"""<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(265px,1fr)); gap:12px;">{cards}</div>"""

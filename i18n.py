@@ -86,6 +86,9 @@ TRANSLATIONS = {
         "data_freshness": "📅 데이터 기준: FIFA 23 (2022-10) · 국제경기 ~ 2024-12",
         "swipe_hint": "← 좌우로 스크롤하여 모든 라운드 보기 →",
         "auto_updates": "팀을 바꾸면 자동으로 다시 계산됩니다",
+        "injured_count": "부상",
+        "squad_value": "스쿼드 시장가치",
+        "live_data_note": "현재 소속 클럽 {n}명은 Transfermarkt 실시간 데이터 (녹색 점)",
     },
     "en": {
         "title": "2026 FIFA World Cup Predictor",
@@ -161,6 +164,9 @@ TRANSLATIONS = {
         "data_freshness": "📅 Data: FIFA 23 (Oct 2022) · International matches up to Dec 2024",
         "swipe_hint": "← scroll horizontally to see all rounds →",
         "auto_updates": "Predictions update automatically when you change teams",
+        "injured_count": "injured",
+        "squad_value": "Squad value",
+        "live_data_note": "Current club for {n} players is live from Transfermarkt (green dot)",
     },
     "es": {
         "title": "Predictor de la Copa Mundial FIFA 2026",

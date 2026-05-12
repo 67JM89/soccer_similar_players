@@ -50,3 +50,9 @@ kaggle.json
 
 # ===== Runtime artifacts =====
 share_url.txt
+
+# ===== Claude Code local state =====
+.claude/
+
+# ===== Selenium / chromedriver artifacts =====
+downloaded_files/
